@@ -28,7 +28,7 @@ namespace ProductHub.Application.Products.Queries
                 request.Page,
                 request.PageSize,
                 request.SortBy,
-                request.SortDir.Equals("desc", StringComparison.OrdinalIgnoreCase),
+                request.SortDir,
                 cancellationToken);
 
             _logger.LogInformation("Fetched {Count} products (Total: {TotalCount})", items.Count, totalCount);

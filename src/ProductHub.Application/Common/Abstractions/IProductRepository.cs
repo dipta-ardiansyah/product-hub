@@ -11,8 +11,8 @@ namespace ProductHub.Application.Common.Abstractions
             decimal? MaxPrice,
             int Page,
             int PageSize,
-            string SortBy,
-            bool Descending,
+            string? SortBy,
+            string? sortDir,
             CancellationToken cancellationToken);
         Task<Product> AddAsync(Product product, CancellationToken cancellationToken);
         Task UpdateAsync(Product product, CancellationToken cancellationToken);
