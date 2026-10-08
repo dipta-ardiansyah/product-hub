@@ -1,0 +1,66 @@
+@{
+    ViewData["Title"] = "Login";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                <div class="text-center mb-4">
+                    <h3 class="fw-bold">Welcome Back</h3>
+                    <p class="text-muted">Sign in to manage your products</p>
+                </div>
+
+                <div id="loginAlert" class="alert alert-danger d-none" role="alert"></div>
+
+                <form id="loginForm">
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email address</label>
+                        <input type="email" class="form-control" id="email" required placeholder="name@example.com" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" required placeholder="••••••••" />
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold">Sign In</button>
+                </form>
+
+                <div class="text-center mt-3">
+                    <p class="text-muted mb-0">Don't have an account? <a href="/Account/Register" class="text-decoration-none">Sign up</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (Auth.isAuthenticated()) {
+                window.location.href = '/products';
+                return;
+            }
+
+            const loginForm = document.getElementById('loginForm');
+            const alertBox = document.getElementById('loginAlert');
+
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                alertBox.classList.add('d-none');
+                alertBox.innerHTML = '';
+
+                const email = document.getElementById('email').value.trim();
+                const password = document.getElementById('password').value;
+
+                try {
+                    const response = await Api.post('/api/auth/login', { email, password }, false);
+                    Auth.setToken(response.token, response.email);
+                    window.location.href = '/products';
+                } catch (err) {
+                    alertBox.textContent = err.message || 'Login failed. Please check your credentials.';
+                    alertBox.classList.remove('d-none');
+                }
+            });
+        });
+    </script>
+}

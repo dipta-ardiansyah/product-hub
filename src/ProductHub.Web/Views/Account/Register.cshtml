@@ -1,0 +1,78 @@
+@{
+    ViewData["Title"] = "Register";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                <div class="text-center mb-4">
+                    <h3 class="fw-bold">Create Account</h3>
+                    <p class="text-muted">Get started with ProductHub today</p>
+                </div>
+
+                <div id="registerAlert" class="alert alert-danger d-none" role="alert"></div>
+
+                <form id="registerForm">
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email address</label>
+                        <input type="email" class="form-control" id="email" required placeholder="name@example.com" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" required minlength="8" placeholder="At least 8 characters" />
+                        <div class="form-text">Must contain lowercase and numbers. Minimum 8 characters.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="confirmPassword" class="form-label">Confirm Password</label>
+                        <input type="password" class="form-control" id="confirmPassword" required minlength="8" placeholder="••••••••" />
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold">Sign Up</button>
+                </form>
+
+                <div class="text-center mt-3">
+                    <p class="text-muted mb-0">Already have an account? <a href="/Account/Login" class="text-decoration-none">Sign in</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (Auth.isAuthenticated()) {
+                window.location.href = '/products';
+                return;
+            }
+
+            const registerForm = document.getElementById('registerForm');
+            const alertBox = document.getElementById('registerAlert');
+
+            registerForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                alertBox.classList.add('d-none');
+                alertBox.innerHTML = '';
+
+                const email = document.getElementById('email').value.trim();
+                const password = document.getElementById('password').value;
+                const confirmPassword = document.getElementById('confirmPassword').value;
+
+                if (password !== confirmPassword) {
+                    alertBox.textContent = 'Passwords do not match.';
+                    alertBox.classList.remove('d-none');
+                    return;
+                }
+
+                try {
+                    const response = await Api.post('/api/auth/register', { email, password }, false);
+                    Auth.setToken(response.token, response.email);
+                    window.location.href = '/products';
+                } catch (err) {
+                    alertBox.textContent = err.message || 'Registration failed.';
+                    alertBox.classList.remove('d-none');
+                }
+            });
+        });
+    </script>
+}
