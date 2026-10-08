@@ -31,9 +31,18 @@ namespace ProductHub.Application.Products.Queries
                 request.SortDir,
                 cancellationToken);
 
+            var dtos = items.Select(p => new ProductDto
+            {
+                Id = p.Id,
+                Name = p.Name,
+                Description = p.Description,
+                Price = p.Price,
+                CreatedAt = p.CreatedAt
+            }).ToList();
+
             _logger.LogInformation("Fetched {Count} products (Total: {TotalCount})", items.Count, totalCount);
 
-            return new PagedResult<ProductDto>(items.Select(x => x.ToDto()).ToList(), totalCount, request.Page, request.PageSize);
+            return new PagedResult<ProductDto>(dtos, totalCount, request.Page, request.PageSize);
         }
     }
 }

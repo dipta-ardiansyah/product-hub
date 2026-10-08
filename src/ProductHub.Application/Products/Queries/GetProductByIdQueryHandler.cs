@@ -28,7 +28,14 @@ namespace ProductHub.Application.Products.Queries
                 throw new NotFoundException(nameof(product), request.Id);
             }
 
-            return product.ToDto();
+            return new ProductDto
+            {
+                Id = product.Id,
+                Name = product.Name,
+                Description = product.Description,
+                Price = product.Price,
+                CreatedAt = product.CreatedAt
+            };
         }
     }
 }

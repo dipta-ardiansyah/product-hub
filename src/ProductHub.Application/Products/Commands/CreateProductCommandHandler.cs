@@ -37,7 +37,14 @@ namespace ProductHub.Application.Products.Commands
 
             _logger.LogInformation("Product created successfully");
 
-            return created.ToDto();
+            return new ProductDto
+            {
+                Id = created.Id,
+                Name = created.Name,
+                Description = created.Description,
+                Price = created.Price,
+                CreatedAt = created.CreatedAt
+            };
         }
     }
 }

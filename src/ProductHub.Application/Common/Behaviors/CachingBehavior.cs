@@ -6,53 +6,67 @@ using ProductHub.Application.Common.Abstractions;
 
 namespace ProductHub.Application.Common.Behaviors
 {
-    /// <summary>
-    /// Cache-aside untuk query ICacheableQuery. Key memuat versi cache sehingga invalidasi
-    /// cukup dengan mengganti versi. Kegagalan Redis TIDAK menggagalkan request.
-    /// </summary>
-    public class CachingBehavior<TRequest, TResponse>(
-        IDistributedCache cache,
-        ICacheVersionService versionService,
-        ILogger<CachingBehavior<TRequest, TResponse>> logger)
-        : IPipelineBehavior<TRequest, TResponse> where TRequest : notnull
+    public class CachingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+    where TRequest : ICacheableQuery<TResponse>
     {
-        public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
-        {
-            if (request is not ICacheableQuery query)
-                return await next();
+        private readonly IDistributedCache _cache;
+        private readonly ICacheVersionService _cacheVersionService;
+        private readonly ILogger<CachingBehavior<TRequest, TResponse>> _logger;
 
-            string? key = null;
+        public CachingBehavior(
+            IDistributedCache cache,
+            ICacheVersionService cacheVersionService,
+            ILogger<CachingBehavior<TRequest, TResponse>> logger)
+        {
+            _cache = cache;
+            _cacheVersionService = cacheVersionService;
+            _logger = logger;
+        }
+
+        public async Task<TResponse> Handle(
+            TRequest request,
+            RequestHandlerDelegate<TResponse> next,
+            CancellationToken cancellationToken)
+        {
+            string versionedKey;
             try
             {
-                var version = await versionService.GetAsync(cancellationToken);
-                key = $"products:v{version}:{query.CacheKey}";
+                var version = await _cacheVersionService.GetAsync(cancellationToken);
+                versionedKey = $"products:v{version}:{request.CacheKey}";
 
-                var cached = await cache.GetStringAsync(key, cancellationToken);
-                if (cached is not null)
+                var cachedData = await _cache.GetStringAsync(versionedKey, cancellationToken);
+                if (!string.IsNullOrEmpty(cachedData))
                 {
-                    logger.LogDebug("Cache hit {CacheKey}", key);
-                    return JsonSerializer.Deserialize<TResponse>(cached)!;
+                    var deserialized = JsonSerializer.Deserialize<TResponse>(cachedData);
+                    if (deserialized != null)
+                    {
+                        _logger.LogInformation("Cache hit for key {CacheKey}", versionedKey);
+                        return deserialized;
+                    }
                 }
             }
-            catch (Exception ex) when (ex is not OperationCanceledException)
+            catch (Exception ex)
             {
-                logger.LogWarning(ex, "Cache read failed, falling back to database");
-                key = null;
+                _logger.LogWarning(ex, "Cache retrieval failed for request {RequestType}. Falling back to source.", typeof(TRequest).Name);
+                return await next();
             }
 
             var response = await next();
 
-            if (key is not null)
+            try
             {
-                try
+                var options = new DistributedCacheEntryOptions
                 {
-                    await cache.SetStringAsync(key, JsonSerializer.Serialize(response),
-                        new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = query.Expiration}, cancellationToken);
-                }
-                catch (Exception ex) when (ex is not OperationCanceledException)
-                {
-                    logger.LogWarning(ex, "Cache write failed");
-                }
+                    AbsoluteExpirationRelativeToNow = request.Expiration ?? TimeSpan.FromMinutes(2)
+                };
+
+                var serialized = JsonSerializer.Serialize(response);
+                await _cache.SetStringAsync(versionedKey, serialized, options, cancellationToken);
+                _logger.LogInformation("Cache set for key {CacheKey}", versionedKey);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Cache write failed for key {CacheKey}", versionedKey);
             }
 
             return response;
