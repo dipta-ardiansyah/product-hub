@@ -1,4 +1,9 @@
 namespace ProductHub.Application.Auth.Dtos
 {
-    public record AuthResponseDto(string Token, DateTime ExpiresAtUtc, string Email);
+    public class AuthResponseDto
+    {
+        public string Token { get; set; } = string.Empty;
+        public string UserId { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+    }
 }

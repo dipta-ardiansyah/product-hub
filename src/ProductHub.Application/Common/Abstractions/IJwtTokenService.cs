@@ -4,6 +4,6 @@ namespace ProductHub.Application.Common.Abstractions
 {
     public interface IJwtTokenService
     {
-        AuthResponseDto CreateToken(string userId, string email);
+        string CreateToken(string userId, string email, IEnumerable<string> roles);
     }
 }
